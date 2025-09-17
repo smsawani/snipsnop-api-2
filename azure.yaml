@@ -2,30 +2,27 @@
 
 name: snipsnop-api-2
 services:
-  web:
+  api:
     project: ./src/services
     language: csharp
-    host: containerapp
-    docker:
-      path: ../Dockerfile
-      context: ../
+    host: function
 pipeline:
   provider: github
 hooks:
   postprovision:
     windows:
       run: |
-        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:ENDPOINT" "$env:CONFIGURATION__AZURECOSMOSDB__ENDPOINT" --project ./src/web/Microsoft.Samples.Cosmos.NoSQL.Quickstart.Web.csproj
-        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:DATABASENAME" "$env:CONFIGURATION__AZURECOSMOSDB__DATABASENAME" --project ./src/web/Microsoft.Samples.Cosmos.NoSQL.Quickstart.Web.csproj
-        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:CONTAINERNAME" "$env:CONFIGURATION__AZURECOSMOSDB__CONTAINERNAME" --project ./src/web/Microsoft.Samples.Cosmos.NoSQL.Quickstart.Web.csproj
+        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:ENDPOINT" "$env:CONFIGURATION__AZURECOSMOSDB__ENDPOINT" --project ./src/services/snipsnop.Services.csproj
+        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:DATABASENAME" "$env:CONFIGURATION__AZURECOSMOSDB__DATABASENAME" --project ./src/services/snipsnop.Services.csproj
+        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:CONTAINERNAME" "$env:CONFIGURATION__AZURECOSMOSDB__CONTAINERNAME" --project ./src/services/snipsnop.Services.csproj
       shell: pwsh
       continueOnError: false
       interactive: true
     posix:
       run: |
-        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:ENDPOINT" "$CONFIGURATION__AZURECOSMOSDB__ENDPOINT" --project ./src/web/Microsoft.Samples.Cosmos.NoSQL.Quickstart.Web.csproj
-        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:DATABASENAME" "$CONFIGURATION__AZURECOSMOSDB__DATABASENAME" --project ./src/web/Microsoft.Samples.Cosmos.NoSQL.Quickstart.Web.csproj
-        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:CONTAINERNAME" "$CONFIGURATION__AZURECOSMOSDB__CONTAINERNAME" --project ./src/web/Microsoft.Samples.Cosmos.NoSQL.Quickstart.Web.csproj
+        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:ENDPOINT" "$CONFIGURATION__AZURECOSMOSDB__ENDPOINT" --project ./src/services/snipsnop.Services.csproj
+        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:DATABASENAME" "$CONFIGURATION__AZURECOSMOSDB__DATABASENAME" --project ./src/services/snipsnop.Services.csproj
+        dotnet user-secrets set "CONFIGURATION:AZURECOSMOSDB:CONTAINERNAME" "$CONFIGURATION__AZURECOSMOSDB__CONTAINERNAME" --project ./src/services/snipsnop.Services.csproj
       shell: sh
       continueOnError: false
       interactive: true

@@ -15,12 +15,12 @@ param location string
 param deploymentUserPrincipalId string = ''
 
 // serviceName is used as value for the tag (azd-service-name) azd uses to identify deployment host
-param serviceName string = 'web'
+param serviceName string = 'api'
 
 var resourceToken = toLower(uniqueString(resourceGroup().id, environmentName, location))
 var tags = {
   'azd-env-name': environmentName
-  repo: 'https://github.com/azure-samples/cosmos-db-nosql-dotnet-quickstart'
+  repo: 'https://github.com/smsawani/snipsnop-api-2'
 }
 
 module managedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
@@ -32,8 +32,8 @@ module managedIdentity 'br/public:avm/res/managed-identity/user-assigned-identit
   }
 }
 
-var databaseName = 'cosmicworks'
-var containerName = 'products'
+var databaseName = 'snipsnop'
+var containerName = 'snips'
 
 module cosmosDbAccount 'br/public:avm/res/document-db/database-account:0.8.1' = {
   name: 'cosmos-db-account'
@@ -81,7 +81,7 @@ module cosmosDbAccount 'br/public:avm/res/document-db/database-account:0.8.1' = 
           {
             name: containerName
             paths: [
-              '/category'
+              '/userId'
             ]
           }
         ]
