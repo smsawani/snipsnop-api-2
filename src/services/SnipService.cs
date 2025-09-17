@@ -8,6 +8,7 @@ using Microsoft.Samples.Cosmos.NoSQL.Quickstart.Services.Interfaces;
 using System.Configuration;
 using System.Net;
 using Settings = Microsoft.Samples.Cosmos.NoSQL.Quickstart.Models.Settings;
+using Newtonsoft.Json;
 
 namespace Microsoft.Samples.Cosmos.NoSQL.Quickstart.Services;
 
@@ -29,22 +30,20 @@ public sealed class SaveSnip(
         var item = await req.ReadFromJsonAsync<SnipData>();
 
         database = await database.ReadAsync();
-        response.WriteString($"Get database:\t{database.Id}");
 
         //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
         Container container = database.GetContainer("snips");
 
         container = await container.ReadContainerAsync();
-        response.WriteString($"Get container:\t{container.Id}");
 
         ItemResponse<SnipData> dbResponse = await container.UpsertItemAsync<SnipData>(
             item: item,
             partitionKey: new PartitionKey(item.userId)
         );
-
-        response.WriteString($"Upserted item:\t{dbResponse.Resource}");
-        response.WriteString($"Status code:\t{dbResponse.StatusCode}");
-        response.WriteString($"Request charge:\t{dbResponse.RequestCharge:0.00}");
+        
+        response.WriteString($"Upserted item:\n {JsonConvert.SerializeObject(dbResponse.Resource, Formatting.Indented)}\n");
+        response.WriteString($"Status code:\t{dbResponse.StatusCode}\n");
+        response.WriteString($"Request charge:\t{dbResponse.RequestCharge:0.00}\n\n");
 
         var query = new QueryDefinition(
                 query: "SELECT * FROM snips s"
@@ -94,13 +93,10 @@ public sealed class LoadSnips(
         var response = req.CreateResponse(HttpStatusCode.OK);
 
         database = await database.ReadAsync();
-        response.WriteString($"Get database:\t{database.Id}\n");
 
         //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
         Container container = database.GetContainer("snips");
-
         container = await container.ReadContainerAsync();
-        response.WriteString($"Get container:\t{container.Id}\n");
 
         var query = new QueryDefinition(
                 query: "SELECT * FROM snips s"
@@ -153,13 +149,12 @@ public sealed class DeleteSnip(
         var response = req.CreateResponse(HttpStatusCode.OK);
 
         database = await database.ReadAsync();
-        response.WriteString($"Get database:\t{database.Id}");
-
+       
         //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
         Container container = database.GetContainer("snips");
 
         var deleteResponse = await container.DeleteItemAsync<SnipData>(item.id, new PartitionKey(item.userId));
-        response.WriteString($"Deleted item:\t{item.id}");
+        response.WriteString($"Deleted item:\t{item.id}\n");
 
         var query = new QueryDefinition(
                 query: "SELECT * FROM snips s"
