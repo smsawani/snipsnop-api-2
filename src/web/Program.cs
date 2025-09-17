@@ -3,7 +3,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Options;
 using Microsoft.Samples.Cosmos.NoSQL.Quickstart.Services;
 using Microsoft.Samples.Cosmos.NoSQL.Quickstart.Services.Interfaces;
-using Microsoft.Samples.Cosmos.NoSQL.Quickstart.Web.Components;
+using snipsnop.Web;
 
 using Settings = Microsoft.Samples.Cosmos.NoSQL.Quickstart.Models.Settings;
 
@@ -39,6 +39,6 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 
-app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+app.MapRazorComponents<snipsnop.Web.Components.App>().AddInteractiveServerRenderMode();
 
 app.Run();
