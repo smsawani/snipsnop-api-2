@@ -4,6 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Exe</OutputType>
+    <UserSecretsId>1a849046-ea32-45f4-9056-0a0c8b071361</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="host.json" />
