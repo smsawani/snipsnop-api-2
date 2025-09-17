@@ -27,7 +27,7 @@ builder.Services.AddSingleton<CosmosClient>((serviceProvider) =>
     return client;
 });
 
-builder.Services.AddTransient<IDemoService, DemoService>();
+builder.Services.AddTransient<ISnipService, SnipService>();
 
 var app = builder.Build();
 
