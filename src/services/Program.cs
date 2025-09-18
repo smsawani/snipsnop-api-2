@@ -24,7 +24,7 @@ hostBuilder.ConfigureServices(services =>
 
         // <create_client>
         CosmosClient client = new(
-            accountEndpoint: "https://cosmos-db-nosql-xkcua7mhixbbs.documents.azure.com:443/", //configuration.AzureCosmosDB.Endpoint,
+            accountEndpoint: "https://cosmos-db-nosql-joex7zjy2asx4.documents.azure.com:443/", //configuration.AzureCosmosDB.Endpoint,
             tokenCredential: new DefaultAzureCredential()
         );
         // </create_client>

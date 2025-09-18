@@ -23,57 +23,67 @@ public sealed class SaveSnip(
     [Function("saveSnip")]
     public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
     {
-        //Database database = client.GetDatabase(configuration.AzureCosmosDB.DatabaseName);
-        Database database = client.GetDatabase("snipsnop");
-        var response = req.CreateResponse(HttpStatusCode.OK);
+        try
+        {
+            //Database database = client.GetDatabase(configuration.AzureCosmosDB.DatabaseName);
+            Database database = client.GetDatabase("snipsnop");
+            var response = req.CreateResponse(HttpStatusCode.OK);
 
-        var item = await req.ReadFromJsonAsync<SnipData>();
+            var item = await req.ReadFromJsonAsync<SnipData>();
 
-        database = await database.ReadAsync();
+            database = await database.ReadAsync();
 
-        //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
-        Container container = database.GetContainer("snips");
+            //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
+            Container container = database.GetContainer("snips");
 
-        container = await container.ReadContainerAsync();
+            container = await container.ReadContainerAsync();
 
-        ItemResponse<SnipData> dbResponse = await container.UpsertItemAsync<SnipData>(
-            item: item,
-            partitionKey: new PartitionKey(item.userId)
-        );
-        
-        response.WriteString($"Upserted item:\n {JsonConvert.SerializeObject(dbResponse.Resource, Formatting.Indented)}\n");
-        response.WriteString($"Status code:\t{dbResponse.StatusCode}\n");
-        response.WriteString($"Request charge:\t{dbResponse.RequestCharge:0.00}\n\n");
-
-        var query = new QueryDefinition(
-                query: "SELECT * FROM snips s"
+            ItemResponse<SnipData> dbResponse = await container.UpsertItemAsync<SnipData>(
+                item: item,
+                partitionKey: new PartitionKey(item.userId)
             );
 
-        using FeedIterator<SnipData> feed = container.GetItemQueryIterator<SnipData>(
-            queryDefinition: query
-        );
+            response.WriteString($"Upserted item:\n {JsonConvert.SerializeObject(dbResponse.Resource, Formatting.Indented)}\n");
+            response.WriteString($"Status code:\t{dbResponse.StatusCode}\n");
+            response.WriteString($"Request charge:\t{dbResponse.RequestCharge:0.00}\n\n");
 
-        response.WriteString($"Ran query:\n{query.QueryText}\n\n\n");
+            var query = new QueryDefinition(
+                    query: "SELECT * FROM snips s"
+                );
 
-        List<SnipData> items = new();
-        double requestCharge = 0d;
-        while (feed.HasMoreResults)
-        {
-            FeedResponse<SnipData> dbResponse1 = await feed.ReadNextAsync();
-            foreach (SnipData snip in dbResponse1)
+            using FeedIterator<SnipData> feed = container.GetItemQueryIterator<SnipData>(
+                queryDefinition: query
+            );
+
+            response.WriteString($"Ran query:\n{query.QueryText}\n\n\n");
+
+            List<SnipData> items = new();
+            double requestCharge = 0d;
+            while (feed.HasMoreResults)
             {
-                items.Add(snip);
+                FeedResponse<SnipData> dbResponse1 = await feed.ReadNextAsync();
+                foreach (SnipData snip in dbResponse1)
+                {
+                    items.Add(snip);
+                }
+                requestCharge += dbResponse1.RequestCharge;
             }
-            requestCharge += dbResponse1.RequestCharge;
-        }
 
-        foreach (var snip in items)
+            foreach (var snip in items)
+            {
+                response.WriteString($"Found item:\t{snip.trackName}\t[{snip.userId}]\t{snip.id}\n");
+            }
+            response.WriteString($"\n\n\n\nRequest charge:\t{requestCharge:0.00}");
+
+            return response;
+        }
+        catch(Exception ex)
         {
-            response.WriteString($"Found item:\t{snip.trackName}\t[{snip.userId}]\t{snip.id}\n");
+            var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+            response.WriteString($"Error: {ex.Message}\n{ex.StackTrace}");
+            return response;
         }
-        response.WriteString($"\n\n\n\nRequest charge:\t{requestCharge:0.00}");
-
-        return response;
+        
     }
 }
 

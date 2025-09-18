@@ -116,10 +116,6 @@ module hostingPlan 'br/public:avm/res/web/serverfarm:0.3.0' = {
     location: location
     tags: tags
     skuName: 'B1' // Consumption plan for Function Apps
-    // sku: {
-    //   name: 'Y1'
-    //   tier: 'Dynamic'
-    // }
   }
 }
 
