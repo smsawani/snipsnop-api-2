@@ -90,33 +90,6 @@ module cosmosDbAccount 'br/public:avm/res/document-db/database-account:0.8.1' = 
   }
 }
 
-module containerRegistry 'br/public:avm/res/container-registry/registry:0.5.1' = {
-  name: 'container-registry'
-  params: {
-    name: 'containerreg${resourceToken}'
-    location: location
-    tags: tags
-    acrAdminUserEnabled: false
-    anonymousPullEnabled: true
-    publicNetworkAccess: 'Enabled'
-    acrSku: 'Standard'
-  }
-}
-
-var containerRegistryRole = subscriptionResourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  '8311e382-0749-4cb8-b61a-304f252e45ec'
-) // AcrPush built-in role
-
-module registryUserAssignment 'br/public:avm/ptn/authorization/resource-role-assignment:0.1.1' = if (!empty(deploymentUserPrincipalId)) {
-  name: 'container-registry-role-assignment-push-user'
-  params: {
-    principalId: deploymentUserPrincipalId
-    resourceId: containerRegistry.outputs.resourceId
-    roleDefinitionId: containerRegistryRole
-  }
-}
-
 module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0.7.0' = {
   name: 'log-analytics-workspace'
   params: {
@@ -126,82 +99,73 @@ module logAnalyticsWorkspace 'br/public:avm/res/operational-insights/workspace:0
   }
 }
 
-module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.8.0' = {
-  name: 'container-apps-env'
+module applicationInsights 'br/public:avm/res/insights/component:0.4.2' = {
+  name: 'application-insights'
   params: {
-    name: 'container-env-${resourceToken}'
+    name: 'appinsights-${resourceToken}'
     location: location
     tags: tags
-    logAnalyticsWorkspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
-    zoneRedundant: false
+    workspaceResourceId: logAnalyticsWorkspace.outputs.resourceId
   }
 }
 
-module containerAppsApp 'br/public:avm/res/app/container-app:0.9.0' = {
-  name: 'container-apps-app'
+module hostingPlan 'br/public:avm/res/web/serverfarm:0.3.0' = {
+  name: 'hosting-plan'
   params: {
-    name: 'container-app-${resourceToken}'
-    environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    name: 'plan-${resourceToken}'
+    location: location
+    tags: tags
+    skuName: 'B1' // Consumption plan for Function Apps
+    // sku: {
+    //   name: 'Y1'
+    //   tier: 'Dynamic'
+    // }
+  }
+}
+
+var storageAccountName = 'st${resourceToken}'
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageAccountName
+  location: location
+  tags: tags
+  kind: 'StorageV2'
+  sku: {
+    name: 'Standard_LRS'
+  }
+  properties: {
+    allowBlobPublicAccess: false
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+module functionApp 'br/public:avm/res/web/site:0.11.1' = {
+  name: 'function-app'
+  params: {
+    name: 'func-${resourceToken}'
     location: location
     tags: union(tags, { 'azd-service-name': serviceName })
-    ingressTargetPort: 8080
-    ingressExternal: true
-    ingressTransport: 'auto'
-    stickySessionsAffinity: 'sticky'
-    scaleMaxReplicas: 1
-    scaleMinReplicas: 1
-    corsPolicy: {
-      allowCredentials: true
-      allowedOrigins: [
-        '*'
-      ]
-    }
+    kind: 'functionapp'
+    serverFarmResourceId: hostingPlan.outputs.resourceId
     managedIdentities: {
       systemAssigned: false
       userAssignedResourceIds: [
         managedIdentity.outputs.resourceId
       ]
     }
-    secrets: {
-      secureList: [
-        {
-          name: 'azure-cosmos-db-nosql-endpoint'
-          value: cosmosDbAccount.outputs.endpoint
-        }
-        {
-          name: 'user-assigned-managed-identity-client-id'
-          value: managedIdentity.outputs.clientId
-        }
-      ]
+    appSettingsKeyValuePairs: {
+      AzureWebJobsStorage: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(storageAccount.id, '2023-01-01').keys[0].value}'
+      WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(storageAccount.id, '2023-01-01').keys[0].value}'
+      WEBSITE_CONTENTSHARE: toLower('func-${resourceToken}')
+      FUNCTIONS_EXTENSION_VERSION: '~4'
+      FUNCTIONS_WORKER_RUNTIME: 'dotnet-isolated'
+      APPINSIGHTS_INSTRUMENTATIONKEY: applicationInsights.outputs.instrumentationKey
+      APPLICATIONINSIGHTS_CONNECTION_STRING: applicationInsights.outputs.connectionString
+      'CONFIGURATION__AZURECOSMOSDB__ENDPOINT': cosmosDbAccount.outputs.endpoint
+      'CONFIGURATION__AZURECOSMOSDB__DATABASENAME': databaseName
+      'CONFIGURATION__AZURECOSMOSDB__CONTAINERNAME': containerName
+      AZURE_CLIENT_ID: managedIdentity.outputs.clientId
     }
-    containers: [
-      {
-        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-        name: 'web-front-end'
-        resources: {
-          cpu: '0.25'
-          memory: '.5Gi'
-        }
-        env: [
-          {
-            name: 'CONFIGURATION__AZURECOSMOSDB__ENDPOINT'
-            secretRef: 'azure-cosmos-db-nosql-endpoint'
-          }
-          {
-            name: 'CONFIGURATION__AZURECOSMOSDB__DATABASENAME'
-            value: databaseName
-          }
-          {
-            name: 'CONFIGURATION__AZURECOSMOSDB__CONTAINERNAME'
-            value: containerName
-          }
-          {
-            name: 'AZURE_CLIENT_ID'
-            secretRef: 'user-assigned-managed-identity-client-id'
-          }
-        ]
-      }
-    ]
   }
 }
 
@@ -210,5 +174,6 @@ output CONFIGURATION__AZURECOSMOSDB__ENDPOINT string = cosmosDbAccount.outputs.e
 output CONFIGURATION__AZURECOSMOSDB__DATABASENAME string = databaseName
 output CONFIGURATION__AZURECOSMOSDB__CONTAINERNAME string = containerName
 
-// Azure Container Registry outputs
-output AZURE_CONTAINER_REGISTRY_ENDPOINT string = containerRegistry.outputs.loginServer
+// Azure Function App outputs
+output AZURE_FUNCTION_APP_NAME string = functionApp.outputs.name
+output AZURE_FUNCTION_APP_URL string = 'https://${functionApp.outputs.defaultHostname}'
