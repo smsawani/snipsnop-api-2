@@ -1,11 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.Samples.Cosmos.NoSQL.Quickstart.Models;
 using Microsoft.Samples.Cosmos.NoSQL.Quickstart.Services.Interfaces;
-using System.Configuration;
 using System.Net;
 using Settings = Microsoft.Samples.Cosmos.NoSQL.Quickstart.Models.Settings;
 using Newtonsoft.Json;
@@ -42,10 +40,6 @@ public sealed class SaveSnip(
                 item: item,
                 partitionKey: new PartitionKey(item.userId)
             );
-
-            response.WriteString($"Upserted item:\n {JsonConvert.SerializeObject(dbResponse.Resource, Formatting.Indented)}\n");
-            response.WriteString($"Status code:\t{dbResponse.StatusCode}\n");
-            response.WriteString($"Request charge:\t{dbResponse.RequestCharge:0.00}\n\n");
 
             return response;
         }
@@ -139,7 +133,6 @@ public sealed class DeleteSnip(
             Container container = database.GetContainer("snips");
 
             var deleteResponse = await container.DeleteItemAsync<SnipData>(item.id, new PartitionKey(item.userId));
-            response.WriteString($"Deleted item:\t{item.id}\n");
      
             return response;
         }
