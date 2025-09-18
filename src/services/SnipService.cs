@@ -47,34 +47,6 @@ public sealed class SaveSnip(
             response.WriteString($"Status code:\t{dbResponse.StatusCode}\n");
             response.WriteString($"Request charge:\t{dbResponse.RequestCharge:0.00}\n\n");
 
-            var query = new QueryDefinition(
-                    query: "SELECT * FROM snips s"
-                );
-
-            using FeedIterator<SnipData> feed = container.GetItemQueryIterator<SnipData>(
-                queryDefinition: query
-            );
-
-            response.WriteString($"Ran query:\n{query.QueryText}\n\n\n");
-
-            List<SnipData> items = new();
-            double requestCharge = 0d;
-            while (feed.HasMoreResults)
-            {
-                FeedResponse<SnipData> dbResponse1 = await feed.ReadNextAsync();
-                foreach (SnipData snip in dbResponse1)
-                {
-                    items.Add(snip);
-                }
-                requestCharge += dbResponse1.RequestCharge;
-            }
-
-            foreach (var snip in items)
-            {
-                response.WriteString($"Found item:\t{snip.trackName}\t[{snip.userId}]\t{snip.id}\n");
-            }
-            response.WriteString($"\n\n\n\nRequest charge:\t{requestCharge:0.00}");
-
             return response;
         }
         catch(Exception ex)
@@ -98,46 +70,47 @@ public sealed class LoadSnips(
     [Function("loadSnips")]
     public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
     {
-        //Database database = client.GetDatabase(configuration.AzureCosmosDB.DatabaseName);
-        Database database = client.GetDatabase("snipsnop");
-        var response = req.CreateResponse(HttpStatusCode.OK);
+        try
+        {
+            //Database database = client.GetDatabase(configuration.AzureCosmosDB.DatabaseName);
+            Database database = client.GetDatabase("snipsnop");
+            var response = req.CreateResponse(HttpStatusCode.OK);
 
-        database = await database.ReadAsync();
+            database = await database.ReadAsync();
 
-        //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
-        Container container = database.GetContainer("snips");
-        container = await container.ReadContainerAsync();
+            //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
+            Container container = database.GetContainer("snips");
+            container = await container.ReadContainerAsync();
 
-        var query = new QueryDefinition(
-                query: "SELECT * FROM snips s"
+            var query = new QueryDefinition(
+                    query: "SELECT * FROM snips s"
+                );
+
+            using FeedIterator<SnipData> feed = container.GetItemQueryIterator<SnipData>(
+                queryDefinition: query
             );
 
-        using FeedIterator<SnipData> feed = container.GetItemQueryIterator<SnipData>(
-            queryDefinition: query
-        );
-
-        response.WriteString($"Ran query:\n{query.QueryText}\n\n\n");
-
-        List<SnipData> items = new();
-        double requestCharge = 0d;
-        while (feed.HasMoreResults)
-        {
-            FeedResponse<SnipData> dbResponse = await feed.ReadNextAsync();
-            foreach (SnipData item in dbResponse)
+            List<SnipData> items = new();
+            double requestCharge = 0d;
+            while (feed.HasMoreResults)
             {
-                items.Add(item);
+                FeedResponse<SnipData> dbResponse = await feed.ReadNextAsync();
+                foreach (SnipData item in dbResponse)
+                {
+                    items.Add(item);
+                }
+                requestCharge += dbResponse.RequestCharge;
             }
-            requestCharge += dbResponse.RequestCharge;
-        }
 
-        foreach (var item in items)
+            response.WriteString(JsonConvert.SerializeObject(items, Formatting.Indented));
+            return response;
+        }
+        catch(Exception ex)
         {
-            response.WriteString($"Found item:\t{item.trackName}\t[{item.userId}]\n");
+            var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+            response.WriteString($"Error: {ex.Message}\n{ex.StackTrace}");
+            return response;
         }
-        response.WriteString($"\n\n\n\nRequest charge:\t{requestCharge:0.00}");
-
-
-        return response;
     }
 }
 
@@ -152,48 +125,29 @@ public sealed class DeleteSnip(
     [Function("deleteSnip")]
     public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "delete")] HttpRequestData req)
     {
-        var item = await req.ReadFromJsonAsync<SnipData>();
-
-        //Database database = client.GetDatabase(configuration.AzureCosmosDB.DatabaseName);
-        Database database = client.GetDatabase("snipsnop");
-        var response = req.CreateResponse(HttpStatusCode.OK);
-
-        database = await database.ReadAsync();
-       
-        //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
-        Container container = database.GetContainer("snips");
-
-        var deleteResponse = await container.DeleteItemAsync<SnipData>(item.id, new PartitionKey(item.userId));
-        response.WriteString($"Deleted item:\t{item.id}\n");
-
-        var query = new QueryDefinition(
-                query: "SELECT * FROM snips s"
-            );
-
-        using FeedIterator<SnipData> feed = container.GetItemQueryIterator<SnipData>(
-            queryDefinition: query
-        );
-
-        response.WriteString($"Ran query:\n{query.QueryText}\n\n\n");
-
-        List<SnipData> items = new();
-        double requestCharge = 0d;
-        while (feed.HasMoreResults)
+        try
         {
-            FeedResponse<SnipData> dbResponse1 = await feed.ReadNextAsync();
-            foreach (SnipData snip in dbResponse1)
-            {
-                items.Add(snip);
-            }
-            requestCharge += dbResponse1.RequestCharge;
-        }
+            var item = await req.ReadFromJsonAsync<SnipData>();
 
-        foreach (var snip in items)
+            //Database database = client.GetDatabase(configuration.AzureCosmosDB.DatabaseName);
+            Database database = client.GetDatabase("snipsnop");
+            var response = req.CreateResponse(HttpStatusCode.OK);
+
+            database = await database.ReadAsync();
+
+            //Container container = database.GetContainer(configuration.AzureCosmosDB.ContainerName);
+            Container container = database.GetContainer("snips");
+
+            var deleteResponse = await container.DeleteItemAsync<SnipData>(item.id, new PartitionKey(item.userId));
+            response.WriteString($"Deleted item:\t{item.id}\n");
+     
+            return response;
+        }
+        catch(Exception ex)
         {
-            response.WriteString($"Found item:\t{snip.trackName}\t[{snip.userId}]\t{snip.id}\n");
+            var response = req.CreateResponse(HttpStatusCode.InternalServerError);
+            response.WriteString($"Error: {ex.Message}\n{ex.StackTrace}");
+            return response;
         }
-        response.WriteString($"\n\n\n\nRequest charge:\t{requestCharge:0.00}");
-
-        return response;
     }
 }
