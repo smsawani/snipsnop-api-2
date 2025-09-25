@@ -1,0 +1,13 @@
+I've successfully created equivalent Terraform files for your Bicep configuration. Here's what was created:
+
+  Files created:
+  1. variables.tf - Defines input variables
+  2. main.tf - Contains all resource definitions
+  3. outputs.tf - Defines output values
+
+  Key differences from Bicep:
+  - Uses random_string resource instead of uniqueString() function
+  - Requires explicit resource_group_name variable since Terraform doesn't have targetScope
+  - Storage connection strings use hardcoded core.windows.net endpoint suffix
+  - Uses azurerm_windows_function_app resource for Function App
+  - Role assignments are separate resources instead of nested properties
